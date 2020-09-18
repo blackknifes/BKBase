@@ -19,7 +19,7 @@ int main()
 	bk_stream_write(&stream, "Test测试", sizeof("Test测试") - 1);
 
     bk_data* data = bk_stream_get_data(&stream);
-    ((unsigned char*)data->data)[data->offset] = 0;
+    ((unsigned char*)data->data)[data->position] = 0;
     printf("%s\n", (char*)data->data);
 	bk_stream_close(&stream);
 
@@ -28,7 +28,7 @@ int main()
 
 	bk_stream_init_with_external_data(&stream, &tmpData);
 	bk_stream_write(&stream, "Test测试", sizeof("Test测试") - 1);
-	((unsigned char*)tmpData.data)[tmpData.offset] = 0;
+	((unsigned char*)tmpData.data)[tmpData.position] = 0;
 	printf("%s\n", (char*)tmpData.data);
 	bk_stream_close(&stream);
 
