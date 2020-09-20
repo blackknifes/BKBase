@@ -258,7 +258,7 @@ int bk_stream_init_with_filename(bk_stream* stream, const char* filename, const 
 	return result;
 }
 
-int bk_stream_init_with_data(bk_stream* stream, void* data, size_t size, bk_buffer_dtor dtor)
+int bk_stream_init_with_buffer(bk_stream* stream, void* data, size_t size, bk_buffer_dtor dtor)
 {
 	if (!data && dtor != BK_BUFFER_COPY)
 		return EINVAL;
@@ -277,7 +277,7 @@ int bk_stream_init_with_data(bk_stream* stream, void* data, size_t size, bk_buff
 	return 0;
 }
 
-int bk_stream_init_with_external_data(bk_stream* stream, bk_buffer* data)
+int bk_stream_init_with_external_buffer(bk_stream* stream, bk_buffer* data)
 {
 	if (!data)
 		return EINVAL;
@@ -323,7 +323,7 @@ size_t bk_stream_write(bk_stream* stream, const void* data, size_t writeSize)
 	return stream->stream_interface->write_callback(stream->user_data, data, writeSize);
 }
 
-bk_buffer* bk_stream_get_data(bk_stream* stream)
+bk_buffer* bk_stream_get_buffer(bk_stream* stream)
 {
 	return (bk_buffer*)stream->user_data;
 }

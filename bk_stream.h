@@ -47,8 +47,8 @@ extern "C" {
 
     BK_EXPORT int bk_stream_init_with_file(bk_stream* stream, FILE* file);
 	BK_EXPORT int bk_stream_init_with_filename(bk_stream* stream, const char* filename, const char* mode);
-	BK_EXPORT int bk_stream_init_with_data(bk_stream* stream, void* data, size_t size, bk_buffer_dtor dtor);
-	BK_EXPORT int bk_stream_init_with_external_data(bk_stream* stream, bk_buffer* data);
+	BK_EXPORT int bk_stream_init_with_buffer(bk_stream* stream, void* data, size_t size, bk_buffer_dtor dtor);
+	BK_EXPORT int bk_stream_init_with_external_buffer(bk_stream* stream, bk_buffer* data);
 #ifdef OS_WINDOWS
 #include <Windows.h>
     BK_EXPORT int bk_stream_init_with_win32file(bk_stream* stream, HANDLE hFile);
@@ -62,8 +62,8 @@ extern "C" {
     BK_EXPORT size_t bk_stream_read(bk_stream* stream, void* readBuffer, size_t readSize);
     //从流写出数据
     BK_EXPORT size_t bk_stream_write(bk_stream* stream, const void* data, size_t writeSize);
-    //获取流中的data对象
-    BK_EXPORT bk_buffer* bk_stream_get_data(bk_stream* stream);
+    //获取流中的buffer对象
+    BK_EXPORT bk_buffer* bk_stream_get_buffer(bk_stream* stream);
     //流eof测试
     BK_EXPORT int bk_stream_eof(bk_stream* stream);
 
