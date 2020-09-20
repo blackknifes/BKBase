@@ -1,9 +1,9 @@
-#include "bk_data.h"
+﻿#include "bk_buffer.h"
 #include <memory.h>
 #include <malloc.h>
 #include <stdio.h>
 
-void bk_data_init(bk_data* data, size_t size)
+void bk_buffer_init(bk_buffer* data, size_t size)
 {
 	data->data = malloc(size);
 	data->dtor = free;
@@ -12,22 +12,22 @@ void bk_data_init(bk_data* data, size_t size)
 	data->mark = SIZE_MAX;
 }
 
-void bk_data_init_with_data(bk_data* data, const void* buffer, size_t size, bk_data_dtor dtor)
+void bk_buffer_init_with_data(bk_buffer* data, void* buffer, size_t size, bk_buffer_dtor dtor)
 {
 	if (!buffer)
 	{
 		_set_errno(EINVAL);
 		return;
 	}
-	if (dtor == BK_DATA_COPY)
+	if (dtor == BK_BUFFER_COPY)
 	{
 		data->data = malloc(size);
-		memcpy((void*)data->data, data, size);
+		memcpy(data->data, data, size);
 		data->dtor = free;
 	}
 	else
 	{
-		data->data = data;
+		data->data = (void*)data;
 		data->dtor = dtor;
 	}
 	data->position = data->limit = 0;
@@ -35,24 +35,24 @@ void bk_data_init_with_data(bk_data* data, const void* buffer, size_t size, bk_d
 	data->mark = SIZE_MAX;
 }
 
-void bk_data_destroy(bk_data* data)
+void bk_buffer_destroy(bk_buffer* data)
 {
 	if (data->dtor && data->data)
-		data->dtor((void*)data->data);
+		data->dtor(data->data);
 }
 
-void bk_data_reserve(bk_data* data, size_t capacity)
+void bk_buffer_reserve(bk_buffer* data, size_t capacity)
 {
 	if (data->capacity <= capacity)
 		return;
 	void* newData = malloc(capacity);
 	memcpy(newData, data->data, data->capacity);
-	bk_data_destroy(data);
+	bk_buffer_destroy(data);
 	data->data = newData;
 	data->capacity = capacity;
 }
 
-void bk_data_write(bk_data* data, const void* buffer, size_t size)
+void bk_buffer_write(bk_buffer* data, const void* buffer, size_t size)
 {
 	size_t newOffset = data->position + size;
 	if (newOffset > data->capacity)
@@ -62,13 +62,13 @@ void bk_data_write(bk_data* data, const void* buffer, size_t size)
 		{
 			newSize = newSize << 1;
 		} while (newSize < newOffset);
-		bk_data_reserve(data, newSize);
+		bk_buffer_reserve(data, newSize);
 	}
 	memcpy((unsigned char*)data->data + data->position, buffer, size);
 	data->position = newOffset;
 }
 
-size_t bk_data_read(bk_data* data, void* buffer, size_t size)
+size_t bk_buffer_read(bk_buffer* data, void* buffer, size_t size)
 {
 	size_t remainSize = data->limit - data->position;
 	if (size > remainSize)
@@ -78,14 +78,14 @@ size_t bk_data_read(bk_data* data, void* buffer, size_t size)
 	return size;
 }
 
-void bk_data_flip(bk_data* data)
+void bk_buffer_flip(bk_buffer* data)
 {
 	data->limit = data->position;
 	data->position = 0;
 	data->mark = SIZE_MAX;
 }
 
-void bk_data_limit(bk_data* data, size_t limitSize)
+void bk_buffer_limit(bk_buffer* data, size_t limitSize)
 {
 	if (limitSize > data->capacity)
 		data->limit = data->capacity;
@@ -96,29 +96,29 @@ void bk_data_limit(bk_data* data, size_t limitSize)
 		data->mark = SIZE_MAX;
 }
 
-size_t bk_data_get_limit(bk_data* data)
+size_t bk_buffer_get_limit(bk_buffer* data)
 {
 	return data->limit;
 }
 
-size_t bk_data_capacity(bk_data* data)
+size_t bk_buffer_capacity(bk_buffer* data)
 {
 	return data->capacity;
 }
 
-void bk_data_position(bk_data* data, size_t pos)
+void bk_buffer_position(bk_buffer* data, size_t pos)
 {
 	data->position = pos > data->limit ? data->limit : pos;
 	if (data->mark != SIZE_MAX && data->mark > data->position)
 		data->mark = SIZE_MAX;
 }
 
-size_t bk_data_get_position(bk_data* data)
+size_t bk_buffer_get_position(bk_buffer* data)
 {
 	return data->position;
 }
 
-int bk_data_seek(bk_data* data, long long offset, int _where)
+int bk_buffer_seek(bk_buffer* data, long long offset, int _where)
 {
 	switch (_where)
 	{
@@ -161,42 +161,47 @@ int bk_data_seek(bk_data* data, long long offset, int _where)
 	return 0;
 }
 
-size_t bk_data_tell(bk_data* data)
+size_t bk_buffer_tell(bk_buffer* data)
 {
 	return data->position;
 }
 
-size_t bk_data_remaining(bk_data* data)
+size_t bk_buffer_remaining(bk_buffer* data)
 {
 	return data->limit - data->position;
 }
 
-void bk_data_compact(bk_data* data)
+void bk_buffer_compact(bk_buffer* data)
 {
-	memcpy((void*)data->data, (const unsigned char*)data->data + data->position, data->limit - data->position);
+	memcpy(data->data, (const unsigned char*)data->data + data->position, data->limit - data->position);
 	data->position = data->limit - data->position;
 	data->limit = data->capacity;
 }
 
-void bk_data_mark(bk_data* data)
+void bk_buffer_mark(bk_buffer* data)
 {
 	data->mark = data->position - 1;
 }
 
-void bk_data_reset(bk_data* data)
+void bk_buffer_reset(bk_buffer* data)
 {
 	data->position = data->mark + 1;
 }
 
-void bk_data_clear(bk_data* data)
+void bk_buffer_clear(bk_buffer* data)
 {
 	data->position = 0;
 	data->limit = data->capacity;
 	data->mark = SIZE_MAX;
 }
 
-void bk_data_rewind(bk_data* data)
+void bk_buffer_rewind(bk_buffer* data)
 {
 	data->position = 0;
 	data->mark = SIZE_MAX;
+}
+
+int bk_buffer_eof(bk_buffer* data)
+{
+	return data->position == data->limit;
 }

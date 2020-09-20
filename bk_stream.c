@@ -1,4 +1,24 @@
-#include "bk_stream.h"
+﻿#include "bk_stream.h"
+
+
+typedef struct bk_stream_interface_struct
+{
+	struct bk_stream_interface_struct** stored;
+	unsigned int ref;
+	bk_stream_close_callback close_callback;
+	bk_stream_seek_callback seek_callback;
+	bk_stream_read_callback read_callback;
+	bk_stream_write_callback write_callback;
+	bk_stream_eof_callback eof_callback;
+} bk_stream_interface;
+
+static bk_stream_interface* file_interface = 0;
+static bk_stream_interface* data_interface = 0;
+static bk_stream_interface* external_data_interface = 0;
+
+#ifdef OS_WINDOWS
+static bk_stream_interface* win32file_interface = 0;
+#endif
 
 //-------标准文件操作-------
 static void bk_file_close(void* userData)
@@ -31,39 +51,49 @@ static size_t bk_file_write(void* userData, const void* data, size_t writeSize)
 {
 	return fwrite(data, 1, writeSize, (FILE*)userData);
 }
+
+static int bk_file_eof(void* userData)
+{
+	return feof((FILE*)userData);
+}
 //-------标准文件操作-------
 
 //-------内存操作-------
-static void bk_stream_data_close(void* userData)
+static void bk_stream_buffer_close(void* userData)
 {
-	bk_data* data = (bk_data*)userData;
-	bk_data_destroy(data);
+	bk_buffer* data = (bk_buffer*)userData;
+	bk_buffer_destroy(data);
 	free(data);
 }
 
-static void bk_stream_data_close_no_free(void* userData)
+static void bk_stream_buffer_close_no_free(void* userData)
 {
-	bk_data* data = (bk_data*)userData;
-	bk_data_destroy(data);
-	memset(data, 0, sizeof(bk_data));
+	bk_buffer* data = (bk_buffer*)userData;
+	bk_buffer_destroy(data);
+	memset(data, 0, sizeof(bk_buffer));
 }
 
-static unsigned long long bk_stream_data_seek(void* userData, long long offset, int _where)
+static unsigned long long bk_stream_buffer_seek(void* userData, long long offset, int _where)
 {
-	bk_data* data = (bk_data*)userData;
-	bk_data_seek(data, offset, _where);
-	return bk_data_tell(data);
+	bk_buffer* data = (bk_buffer*)userData;
+	bk_buffer_seek(data, offset, _where);
+	return bk_buffer_tell(data);
 }
 
-static size_t bk_stream_data_read(void* userData, void* readBuffer, size_t readSize)
+static size_t bk_stream_buffer_read(void* userData, void* readBuffer, size_t readSize)
 {
-	return bk_data_read((bk_data*)userData, readBuffer, readSize);
+	return bk_buffer_read((bk_buffer*)userData, readBuffer, readSize);
 }
 
-static size_t bk_stream_data_write(void* userData, const void* writeBuffer, size_t writeSize)
+static size_t bk_stream_buffer_write(void* userData, const void* writeBuffer, size_t writeSize)
 {
-	bk_data_write((bk_data*)userData, writeBuffer, writeSize);
+	bk_buffer_write((bk_buffer*)userData, writeBuffer, writeSize);
 	return writeSize;
+}
+
+static int bk_stream_buffer_eof(void* userData)
+{
+	return bk_buffer_eof((bk_buffer*)userData);
 }
 //-------内存操作-------
 
@@ -118,30 +148,101 @@ static size_t bk_win32file_write(void* userData, const void* data, size_t writeS
 	WriteFile(userData, data, (DWORD)writeSize, &dwSize, 0);
 	return dwSize;
 }
+
+static int bk_win32file_eof(void* userData)
+{
+	LARGE_INTEGER pos;
+	LARGE_INTEGER offset;
+	offset.QuadPart = pos.QuadPart = 0;
+	SetFilePointerEx(userData, offset, &pos, FILE_CURRENT);
+	GetFileSizeEx(userData, &offset);
+	return offset.QuadPart == pos.QuadPart;
+}
 #endif
 //-------win32文件操作-------
 
 
-void bk_stream_init(
-	bk_stream* stream,
-	void* userData,
+bk_stream_interface* bk_stream_interface_create(
 	bk_stream_close_callback closeCallback,
 	bk_stream_seek_callback seekCallback,
 	bk_stream_read_callback readCallback,
-	bk_stream_write_callback writeCallback)
+	bk_stream_write_callback writeCallback,
+	bk_stream_eof_callback eof_callback)
+{
+	bk_stream_interface* _interface = (bk_stream_interface*)malloc(sizeof(bk_stream_interface));
+	_interface->stored = 0;
+	_interface->ref = 0;
+	_interface->close_callback = closeCallback;
+	_interface->seek_callback = seekCallback;
+	_interface->read_callback = readCallback;
+	_interface->write_callback = writeCallback;
+	_interface->eof_callback = eof_callback;
+	return _interface;
+}
+
+void bk_stream_interface_destroy(bk_stream_interface* _interface)
+{
+	if (_interface->ref == 0 || --_interface->ref == 0)
+	{
+		if (_interface->stored)
+			*_interface->stored = 0;
+		free(_interface);
+	}
+}
+
+void bk_stream_init(
+	bk_stream* stream,
+	void* userData,
+	bk_stream_interface* _interface)
 {
 	stream->user_data = userData;
-	stream->close_callback = closeCallback;
-	stream->seek_callback = seekCallback;
-	stream->read_callback = readCallback;
-	stream->write_callback = writeCallback;
+	stream->stream_interface = _interface;
+	++_interface->ref;
 }
+
+static bk_stream_interface* bk_stream_interface_get_file()
+{
+	if (file_interface)
+		return file_interface;
+	file_interface = bk_stream_interface_create(bk_file_close, bk_file_seek, bk_file_read, bk_file_write, bk_file_eof);
+	file_interface->stored = &file_interface;
+	return file_interface;
+}
+
+static bk_stream_interface* bk_stream_interface_get_data()
+{
+	if (data_interface)
+		return data_interface;
+	data_interface = bk_stream_interface_create(bk_stream_buffer_close, bk_stream_buffer_seek, bk_stream_buffer_read, bk_stream_buffer_write, bk_stream_buffer_eof);
+	data_interface->stored = &data_interface;
+	return data_interface;
+}
+
+static bk_stream_interface* bk_stream_interface_get_external_data()
+{
+	if (external_data_interface)
+		return external_data_interface;
+	external_data_interface = bk_stream_interface_create(0, bk_stream_buffer_seek, bk_stream_buffer_read, bk_stream_buffer_write, bk_stream_buffer_eof);
+	external_data_interface->stored = &external_data_interface;
+	return external_data_interface;
+}
+
+#ifdef OS_WINDOWS
+static bk_stream_interface* bk_stream_interface_get_win32file()
+{
+	if (win32file_interface)
+		return win32file_interface;
+	win32file_interface = bk_stream_interface_create(bk_win32file_close, bk_win32file_seek, bk_win32file_read, bk_win32file_write, bk_win32file_eof);
+	win32file_interface->stored = &win32file_interface;
+	return win32file_interface;
+}
+#endif
 
 int bk_stream_init_with_file(bk_stream* stream, FILE* file)
 {
 	if (!file)
 		return EINVAL;
-	bk_stream_init(stream, file, bk_file_close, bk_file_seek, bk_file_read, bk_file_write);
+	bk_stream_init(stream, file, bk_stream_interface_get_file());
 	return 0;
 }
 
@@ -157,39 +258,33 @@ int bk_stream_init_with_filename(bk_stream* stream, const char* filename, const 
 	return result;
 }
 
-int bk_stream_init_with_data(bk_stream* stream, const void* data, size_t size, bk_data_dtor dtor)
+int bk_stream_init_with_data(bk_stream* stream, void* data, size_t size, bk_buffer_dtor dtor)
 {
-	if (!data && dtor != BK_DATA_COPY)
+	if (!data && dtor != BK_BUFFER_COPY)
 		return EINVAL;
-	bk_data* dataUserData = (bk_data*)malloc(sizeof(bk_data));
+	bk_buffer* dataUserData = (bk_buffer*)malloc(sizeof(bk_buffer));
 
-	if (dtor == BK_DATA_COPY && !data)
-		bk_data_init(dataUserData, size);
+	if (dtor == BK_BUFFER_COPY && !data)
+		bk_buffer_init(dataUserData, size);
 	else
-		bk_data_init_with_data(dataUserData, data, size, dtor);
-	bk_data_limit(dataUserData, size);
+		bk_buffer_init_with_data(dataUserData, data, size, dtor);
+	bk_buffer_limit(dataUserData, size);
 
 	bk_stream_init(
 		stream, 
 		dataUserData,
-		bk_stream_data_close,
-		bk_stream_data_seek,
-		bk_stream_data_read,
-		bk_stream_data_write);
+		bk_stream_interface_get_data());
 	return 0;
 }
 
-int bk_stream_init_with_external_data(bk_stream* stream, bk_data* data)
+int bk_stream_init_with_external_data(bk_stream* stream, bk_buffer* data)
 {
 	if (!data)
 		return EINVAL;
 	bk_stream_init(
 		stream,
 		data,
-		bk_stream_data_close_no_free,
-		bk_stream_data_seek,
-		bk_stream_data_read,
-		bk_stream_data_write);
+		bk_stream_interface_get_external_data());
 	return 0;
 }
 
@@ -202,37 +297,40 @@ int bk_stream_init_with_win32file(bk_stream* stream, HANDLE hFile)
 	bk_stream_init(
 		stream, 
 		hFile, 
-		bk_win32file_close, 
-		bk_win32file_seek, 
-		bk_win32file_read, 
-		bk_win32file_write);
+		bk_stream_interface_get_win32file());
 	return 0;
 }
 
 void bk_stream_close(bk_stream* stream)
 {
-	if (stream->close_callback)
-		stream->close_callback(stream->user_data);
+	if (stream->stream_interface->close_callback)
+		stream->stream_interface->close_callback(stream->user_data);
+	bk_stream_interface_destroy(stream->stream_interface);
 }
 
 unsigned long long bk_stream_seek(bk_stream* stream, long long offset, int _where)
 {
-	return stream->seek_callback(stream->user_data, offset, _where);
+	return stream->stream_interface->seek_callback(stream->user_data, offset, _where);
 }
 
 size_t bk_stream_read(bk_stream* stream, void* readBuffer, size_t readSize)
 {
-	return stream->read_callback(stream->user_data, readBuffer, readSize);
+	return stream->stream_interface->read_callback(stream->user_data, readBuffer, readSize);
 }
 
 size_t bk_stream_write(bk_stream* stream, const void* data, size_t writeSize)
 {
-	return stream->write_callback(stream->user_data, data, writeSize);
+	return stream->stream_interface->write_callback(stream->user_data, data, writeSize);
 }
 
-bk_data* bk_stream_get_data(bk_stream* stream)
+bk_buffer* bk_stream_get_data(bk_stream* stream)
 {
-	return (bk_data*)stream->user_data;
+	return (bk_buffer*)stream->user_data;
+}
+
+int bk_stream_eof(bk_stream* stream)
+{
+	return stream->stream_interface->eof_callback(stream->user_data);
 }
 
 #endif

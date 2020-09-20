@@ -9,7 +9,7 @@ endif()
 
 add_definitions("-DBK_EXPORT_IMPLEMENTS")
 
-set(SOURCES bk_stream.c bk_data.c)
-set(HEADERS bk_stream.h bk_export.h bk_platform.h bk_data.h)
+set(SOURCES bk_stream.c bk_buffer.c)
+set(HEADERS bk_stream.h bk_export.h bk_platform.h bk_buffer.h)
 
 add_executable(BKBase ${SOURCES} ${HEADERS} main.cpp)

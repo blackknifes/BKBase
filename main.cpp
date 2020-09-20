@@ -1,4 +1,4 @@
-#include <stdio.h>
+﻿#include <stdio.h>
 #include "bk_stream.h"
 
 int main()
@@ -15,16 +15,16 @@ int main()
 	bk_stream_write(&stream, "Test测试", sizeof("Test测试") - 1);
 	bk_stream_close(&stream);
 
-	bk_stream_init_with_data(&stream, nullptr, 0x4000, BK_DATA_COPY);
+	bk_stream_init_with_data(&stream, nullptr, 0x4000, BK_BUFFER_COPY);
 	bk_stream_write(&stream, "Test测试", sizeof("Test测试") - 1);
 
-    bk_data* data = bk_stream_get_data(&stream);
+    bk_buffer* data = bk_stream_get_data(&stream);
     ((unsigned char*)data->data)[data->position] = 0;
     printf("%s\n", (char*)data->data);
 	bk_stream_close(&stream);
 
-    bk_data tmpData;
-    bk_data_init(&tmpData, 1024);
+    bk_buffer tmpData;
+    bk_buffer_init(&tmpData, 1024);
 
 	bk_stream_init_with_external_data(&stream, &tmpData);
 	bk_stream_write(&stream, "Test测试", sizeof("Test测试") - 1);
