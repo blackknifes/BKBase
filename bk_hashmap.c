@@ -229,7 +229,8 @@ bk_hashmap_iterator bk_hashmap_find(bk_hashmap* _map, const void* key)
 	bk_hashmap_iterator itor;
 	itor.container = _map;
 	itor.node = BK_NULL;
-	itor.ppNext = BK_NULL;
+	itor.next = BK_NULL;
+	itor.bucket_index = 0;
 	if (_map->size == 0)
 		return itor;
 	size_t hashCode = _map->hasher(key);
@@ -241,7 +242,8 @@ bk_hashmap_iterator bk_hashmap_find(bk_hashmap* _map, const void* key)
 		if(_map->comparer(node->key, key))
 		{
 			itor.node = node;
-			itor.ppNext = ppNode;
+			itor.next = ppNode;
+			itor.bucket_index = index;
 			break;
 		}
 
@@ -258,7 +260,8 @@ bk_hashmap_iterator bk_hashmap_iterator_begin(bk_hashmap* _map)
 	if(_map->size == 0)
 	{
 		itor.node = BK_NULL;
-		itor.ppNext = BK_NULL;
+		itor.next = BK_NULL;
+		itor.bucket_index = 0;
 		return itor;
 	}
 
@@ -267,7 +270,8 @@ bk_hashmap_iterator bk_hashmap_iterator_begin(bk_hashmap* _map)
 		if(_map->buckets[i])
 		{
 			itor.node = _map->buckets[i];
-			itor.ppNext = &_map->buckets[i];
+			itor.next = &_map->buckets[i];
+			itor.bucket_index = i;
 			break;
 		}
 	}
@@ -298,15 +302,29 @@ void bk_hashmap_iterator_set_value(const bk_hashmap_iterator* itor, void* val)
 
 void bk_hashmap_iterator_next(bk_hashmap_iterator* itor)
 {
-	itor->ppNext = &itor->node->next;
-	itor->node = *itor->ppNext;
+	itor->next = &itor->node->next;
+	itor->node = *itor->next;
+	
+	if(!itor->node)
+	{
+		for (size_t i = itor->bucket_index + 1; i < itor->container->bucket_count; ++i)
+		{
+			if (itor->container->buckets[i])
+			{
+				itor->node = itor->container->buckets[i];
+				itor->next = &itor->container->buckets[i];
+				itor->bucket_index = i;
+				break;
+			}
+		}
+	}
 }
 
 void bk_hashmap_iterator_remove(bk_hashmap_iterator* itor)
 {
 	bk_hashmap_node* deletedNode = itor->node;
 
-	*itor->ppNext = deletedNode->next;
+	*itor->next = deletedNode->next;
 	itor->node = deletedNode->next;
 	--itor->container->size;
 	bk_hashmap_node_destroy(deletedNode, itor->container->key_dtor, itor->container->value_dtor);

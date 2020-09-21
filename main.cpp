@@ -3,6 +3,8 @@
 #include "bk_stream.h"
 #include "bk_vector.h"
 #include <stdio.h>
+#include <vector>
+#include <algorithm>
 
 int main()
 {
@@ -68,14 +70,21 @@ int main()
         bk_hashmap_insert(map, buf, (void*)i);
     }
 
-    for (size_t i = 0; i < 1024; ++i)
+    std::vector<size_t> vals;
+
+    auto itor = bk_hashmap_iterator_begin(map);
+    while (bk_hashmap_iterator_is_valid(&itor))
     {
-		char buf[16];
-		sprintf_s(buf, 16, "%d", (int)i);
-		auto itor = bk_hashmap_find(map, buf);
 		const char* key = (const char*)bk_hashmap_iterator_get_key(&itor);
 		size_t val = (size_t)bk_hashmap_iterator_get_value(&itor);
-        printf("%s: %d\n", key, (int)val);
+	//	printf("%s: %d\n", key, (int)val);
+        bk_hashmap_iterator_next(&itor);
+        vals.push_back(val);
+    }
+    std::sort(vals.begin(), vals.end());
+    for (size_t val: vals)
+    {
+        printf("%zu\n", val);
     }
 
     bk_hashmap_destroy(map);

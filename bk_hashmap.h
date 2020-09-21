@@ -15,8 +15,9 @@ extern "C" {
 	typedef struct bk_hashmap_iterator_struct
 	{
 		bk_hashmap* container;
-		bk_hashmap_node** ppNext;
+		bk_hashmap_node** next;
 		bk_hashmap_node* node;
+		size_t bucket_index;
 	}bk_hashmap_iterator;
 
 	typedef size_t(*bk_hasher)(const void*);
