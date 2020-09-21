@@ -117,6 +117,7 @@ void bk_hashmap_destroy(bk_hashmap* _map)
 {
 	for (size_t i = 0; i < _map->bucket_count; ++i)
 		bk_hashmap_bucket_destroy(_map->buckets[i], _map->key_dtor, _map->value_dtor);
+	free(_map->buckets);
 	free(_map);
 }
 
