@@ -27,6 +27,7 @@ extern "C" {
 	BK_EXPORT void bk_vector_pop_back(bk_vector* vec);
 	BK_EXPORT void bk_vector_insert(bk_vector* vec, const void* _data, size_t index);
 	BK_EXPORT void bk_vector_erase(bk_vector* vec, size_t index);
+	BK_EXPORT void bk_vector_clear(bk_vector* vec);
 #ifdef __cplusplus
 };
 #endif

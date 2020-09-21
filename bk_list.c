@@ -4,7 +4,10 @@
 #include <memory.h>
 
 #define ALIGN(size) (((size) + sizeof(void*) - 1) & ~(sizeof(void*) - 1))
-#define BK_LIST_GET_NODE(ptr) ((struct bk_list_node_struct*)((unsigned char*)ptr - (sizeof(struct bk_list_node_struct) << 1)))
+#define BK_LIST_GET_NODE(ptr) ((struct bk_list_node_struct*)( \
+								(unsigned char*)(ptr) - \
+								(unsigned char*)&(((bk_list_node*)0)->data)	\
+								))
 
 typedef struct bk_list_node_struct
 {
@@ -25,7 +28,7 @@ typedef struct bk_list_struct
 static bk_list_node* bk_list_node_create(size_t valSize)
 {
 	bk_list_node* node = (bk_list_node*)malloc(valSize + (sizeof(struct bk_list_struct*) << 1));
-	node->pre = node->next = 0;
+	node->pre = node->next = BK_NULL;
 	return node;
 }
 
@@ -47,7 +50,7 @@ bk_list* bk_list_create(size_t valSize, void(*dtor)(void*))
 {
 	assert(valSize != 0);
 	bk_list* _list = (bk_list*)malloc(sizeof(bk_list));
-	_list->front = _list->back = 0;
+	_list->front = _list->back = BK_NULL;
 	_list->value_size = ALIGN(valSize);
 	_list->size = 0;
 	_list->dtor = dtor;
@@ -83,14 +86,14 @@ void bk_list_clear(bk_list* _list)
 		}
 	}
 	_list->size = 0;
-	_list->front = _list->back = 0;
+	_list->front = _list->back = BK_NULL;
 }
 
 void* bk_list_get_next(void* data)
 {
 	bk_list_node* node = BK_LIST_GET_NODE(data)->next;
 	if (!node)
-		return 0;
+		return BK_NULL;
 	return node->data;
 }
 
@@ -98,7 +101,7 @@ void* bk_list_get_pre(void* data)
 {
 	bk_list_node* node = BK_LIST_GET_NODE(data)->pre;
 	if (!node)
-		return 0;
+		return BK_NULL;
 	return node->data;
 }
 
@@ -123,8 +126,10 @@ void bk_list_push_front(bk_list* _list, const void* _data)
 {
 	bk_list_node* node = bk_list_node_create_with_data(_list->value_size, _data);
 	node->next = _list->front;
-	if(_list->front)
+	if (_list->front)
 		_list->front->pre = node;
+	else
+		_list->back = node;
 	_list->front = node;
 	++_list->size;
 }
@@ -133,8 +138,10 @@ void bk_list_push_back(bk_list* _list, const void* _data)
 {
 	bk_list_node* node = bk_list_node_create_with_data(_list->value_size, _data);
 	node->pre = _list->back;
-	if(_list->back)
+	if (_list->back)
 		_list->back->next = node;
+	else
+		_list->front = node;
 	_list->back = node;
 	++_list->size;
 }
@@ -145,7 +152,7 @@ void bk_list_pop_back(bk_list* _list)
 	bk_list_node* node = _list->back->pre;
 	bk_list_node_destroy(_list->back, _list->dtor);
 	if (node)
-		node->next = 0;
+		node->next = BK_NULL;
 	_list->back = node;
 	--_list->size;
 }
@@ -156,7 +163,7 @@ void bk_list_pop_front(bk_list* _list)
 	bk_list_node* node = _list->front->next;
 	bk_list_node_destroy(_list->front, _list->dtor);
 	if (node)
-		node->pre = 0;
+		node->pre = BK_NULL;
 	_list->front = node;
 	--_list->size;
 }

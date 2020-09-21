@@ -1,4 +1,6 @@
 ﻿#include "bk_data.h"
+#include <malloc.h>
+#include <memory.h>
 
 typedef struct bk_data_internal_struct
 {

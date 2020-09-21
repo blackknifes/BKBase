@@ -102,7 +102,7 @@ void* bk_vector_get_back(bk_vector* vec)
 void bk_vector_push_back(bk_vector* vec, const void* _data)
 {
 	if (vec->size == vec->capacity)
-		bk_vector_reserve(vec, vec->capacity << 1);
+		bk_vector_reserve(vec, vec->capacity == 0 ? 8 : vec->capacity << 1);
 	++vec->size;
 	memcpy(bk_vector_get_back(vec), _data, vec->value_size);
 }
@@ -119,7 +119,7 @@ void bk_vector_insert(bk_vector* vec, const void* _data, size_t index)
 {
 	assert(index <= vec->size);
 	if (vec->size == vec->capacity)
-		bk_vector_reserve(vec, vec->capacity << 1);
+		bk_vector_reserve(vec, vec->capacity == 0? 8 : vec->capacity << 1);
 	size_t moveCount = vec->size - index;
 	memmove(bk_vector_get_data_noassert(vec, index + 1), bk_vector_get_data_noassert(vec, index), vec->value_size * moveCount);
 	memcpy(bk_vector_get_data_noassert(vec, index), _data, vec->value_size);
@@ -133,4 +133,14 @@ void bk_vector_erase(bk_vector* vec, size_t index)
 	size_t moveCount = vec->size - index - 1;
 	memcpy(bk_vector_get_data_noassert(vec, index), bk_vector_get_data_noassert(vec, index + 1), moveCount * vec->value_size);
 	--vec->size;
+}
+
+void bk_vector_clear(bk_vector* vec)
+{
+	if(vec->dtor)
+	{
+		for (size_t i = 0; i < vec->size; ++i)
+			vec->dtor((unsigned char*)vec->data + i * vec->value_size);
+	}
+	vec->size = 0;
 }
