@@ -17,7 +17,7 @@ extern "C" {
     typedef unsigned long long(*bk_stream_seek_callback)(void* userData, long long offset, int _where);
     typedef size_t(*bk_stream_read_callback)(void* userData, void* readBuffer, size_t readSize);
     typedef size_t(*bk_stream_write_callback)(void* userData, const void* data, size_t writeSize);
-    typedef int(*bk_stream_eof_callback)(void* userData);
+    typedef bk_bool(*bk_stream_eof_callback)(void* userData);
 
     //流接口
     struct bk_stream_interface_struct;
@@ -65,7 +65,7 @@ extern "C" {
     //获取流中的buffer对象
     BK_EXPORT bk_buffer* bk_stream_get_buffer(bk_stream* stream);
     //流eof测试
-    BK_EXPORT int bk_stream_eof(bk_stream* stream);
+    BK_EXPORT bk_bool bk_stream_eof(bk_stream* stream);
 
 #ifdef __cplusplus
 };

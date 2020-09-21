@@ -12,12 +12,12 @@ typedef struct bk_stream_interface_struct
 	bk_stream_eof_callback eof_callback;
 } bk_stream_interface;
 
-static bk_stream_interface* file_interface = 0;
-static bk_stream_interface* data_interface = 0;
-static bk_stream_interface* external_data_interface = 0;
+static bk_stream_interface* file_interface = BK_NULL;
+static bk_stream_interface* data_interface = BK_NULL;
+static bk_stream_interface* external_data_interface = BK_NULL;
 
 #ifdef OS_WINDOWS
-static bk_stream_interface* win32file_interface = 0;
+static bk_stream_interface* win32file_interface = BK_NULL;
 #endif
 
 //-------标准文件操作-------
@@ -52,7 +52,7 @@ static size_t bk_file_write(void* userData, const void* data, size_t writeSize)
 	return fwrite(data, 1, writeSize, (FILE*)userData);
 }
 
-static int bk_file_eof(void* userData)
+static bk_bool bk_file_eof(void* userData)
 {
 	return feof((FILE*)userData);
 }
@@ -61,16 +61,7 @@ static int bk_file_eof(void* userData)
 //-------内存操作-------
 static void bk_stream_buffer_close(void* userData)
 {
-	bk_buffer* data = (bk_buffer*)userData;
-	bk_buffer_destroy(data);
-	free(data);
-}
-
-static void bk_stream_buffer_close_no_free(void* userData)
-{
-	bk_buffer* data = (bk_buffer*)userData;
-	bk_buffer_destroy(data);
-	memset(data, 0, sizeof(bk_buffer));
+	bk_buffer_destroy((bk_buffer*)userData);
 }
 
 static unsigned long long bk_stream_buffer_seek(void* userData, long long offset, int _where)
@@ -91,7 +82,7 @@ static size_t bk_stream_buffer_write(void* userData, const void* writeBuffer, si
 	return writeSize;
 }
 
-static int bk_stream_buffer_eof(void* userData)
+static bk_bool bk_stream_buffer_eof(void* userData)
 {
 	return bk_buffer_eof((bk_buffer*)userData);
 }
@@ -149,7 +140,7 @@ static size_t bk_win32file_write(void* userData, const void* data, size_t writeS
 	return dwSize;
 }
 
-static int bk_win32file_eof(void* userData)
+static bk_bool bk_win32file_eof(void* userData)
 {
 	LARGE_INTEGER pos;
 	LARGE_INTEGER offset;
@@ -243,7 +234,7 @@ int bk_stream_init_with_file(bk_stream* stream, FILE* file)
 	if (!file)
 		return EINVAL;
 	bk_stream_init(stream, file, bk_stream_interface_get_file());
-	return 0;
+	return BK_ERROR_OK;
 }
 
 int bk_stream_init_with_filename(bk_stream* stream, const char* filename, const char* mode)
@@ -253,7 +244,7 @@ int bk_stream_init_with_filename(bk_stream* stream, const char* filename, const 
 		return errno;
 
 	int result = bk_stream_init_with_file(stream, f);
-	if(result != 0)
+	if(result != BK_ERROR_OK)
 		fclose(f);
 	return result;
 }
@@ -262,19 +253,19 @@ int bk_stream_init_with_buffer(bk_stream* stream, void* data, size_t size, bk_bu
 {
 	if (!data && dtor != BK_BUFFER_COPY)
 		return EINVAL;
-	bk_buffer* dataUserData = (bk_buffer*)malloc(sizeof(bk_buffer));
+	bk_buffer* dataUserData;
 
 	if (dtor == BK_BUFFER_COPY && !data)
-		bk_buffer_init(dataUserData, size);
+		dataUserData = bk_buffer_create(size);
 	else
-		bk_buffer_init_with_data(dataUserData, data, size, dtor);
+		dataUserData = bk_buffer_create_with_data(data, size, dtor);
 	bk_buffer_limit(dataUserData, size);
 
 	bk_stream_init(
 		stream, 
 		dataUserData,
 		bk_stream_interface_get_data());
-	return 0;
+	return BK_ERROR_OK;
 }
 
 int bk_stream_init_with_external_buffer(bk_stream* stream, bk_buffer* data)
@@ -285,7 +276,7 @@ int bk_stream_init_with_external_buffer(bk_stream* stream, bk_buffer* data)
 		stream,
 		data,
 		bk_stream_interface_get_external_data());
-	return 0;
+	return BK_ERROR_OK;
 }
 
 #ifdef OS_WINDOWS
@@ -298,7 +289,7 @@ int bk_stream_init_with_win32file(bk_stream* stream, HANDLE hFile)
 		stream, 
 		hFile, 
 		bk_stream_interface_get_win32file());
-	return 0;
+	return BK_ERROR_OK;
 }
 
 void bk_stream_close(bk_stream* stream)
@@ -328,7 +319,7 @@ bk_buffer* bk_stream_get_buffer(bk_stream* stream)
 	return (bk_buffer*)stream->user_data;
 }
 
-int bk_stream_eof(bk_stream* stream)
+bk_bool bk_stream_eof(bk_stream* stream)
 {
 	return stream->stream_interface->eof_callback(stream->user_data);
 }

@@ -3,22 +3,35 @@
 #include <malloc.h>
 #include <stdio.h>
 
-void bk_buffer_init(bk_buffer* data, size_t size)
+typedef struct bk_buffer_struct
 {
+	void* data;
+	size_t capacity;
+	size_t position;
+	size_t limit;
+	size_t mark;
+	bk_buffer_dtor dtor;
+} bk_buffer;
+
+bk_buffer* bk_buffer_create(size_t size)
+{
+	bk_buffer* data = (bk_buffer*)malloc(sizeof(bk_buffer));
 	data->data = malloc(size);
 	data->dtor = free;
 	data->position = data->limit = 0;
 	data->capacity = size;
 	data->mark = SIZE_MAX;
+	return data;
 }
 
-void bk_buffer_init_with_data(bk_buffer* data, void* buffer, size_t size, bk_buffer_dtor dtor)
+bk_buffer* bk_buffer_create_with_data(void* buffer, size_t size, bk_buffer_dtor dtor)
 {
 	if (!buffer)
 	{
 		_set_errno(EINVAL);
-		return;
+		return BK_NULL;
 	}
+	bk_buffer* data = (bk_buffer*)malloc(sizeof(bk_buffer));
 	if (dtor == BK_BUFFER_COPY)
 	{
 		data->data = malloc(size);
@@ -27,18 +40,20 @@ void bk_buffer_init_with_data(bk_buffer* data, void* buffer, size_t size, bk_buf
 	}
 	else
 	{
-		data->data = (void*)data;
+		data->data = buffer;
 		data->dtor = dtor;
 	}
 	data->position = data->limit = 0;
 	data->capacity = size;
 	data->mark = SIZE_MAX;
+	return data;
 }
 
 void bk_buffer_destroy(bk_buffer* data)
 {
 	if (data->dtor && data->data)
 		data->dtor(data->data);
+	free(data);
 }
 
 void bk_buffer_reserve(bk_buffer* data, size_t capacity)
@@ -201,7 +216,7 @@ void bk_buffer_rewind(bk_buffer* data)
 	data->mark = SIZE_MAX;
 }
 
-int bk_buffer_eof(bk_buffer* data)
+bk_bool bk_buffer_eof(bk_buffer* data)
 {
 	return data->position == data->limit;
 }

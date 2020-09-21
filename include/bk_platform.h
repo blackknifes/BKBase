@@ -5,6 +5,7 @@
 #ifndef BKBASE_BK_PLATFORM_H
 #define BKBASE_BK_PLATFORM_H
 
+#include "bk_error.h"
 #include "bk_types.h"
 
 #ifdef _MSC_VER

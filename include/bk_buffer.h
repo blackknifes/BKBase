@@ -11,20 +11,14 @@ extern "C" {
 #define BK_BUFFER_COPY ((bk_buffer_dtor)SIZE_MAX)
 
 	typedef void(*bk_buffer_dtor)(void* data);
-	typedef struct bk_buffer_struct
-	{
-		void* data;
-		size_t capacity;
-		size_t position;
-		size_t limit;
-		size_t mark;
-		bk_buffer_dtor dtor;
-	} bk_buffer;
+
+	struct bk_buffer_struct;
+	typedef struct bk_buffer_struct bk_buffer;
 
 	//初始化data，并分配size大小的内存
-	BK_EXPORT void bk_buffer_init(bk_buffer* data, size_t size);
+	BK_EXPORT bk_buffer* bk_buffer_create(size_t size);
 	//使用外部缓冲初始化data
-	BK_EXPORT void bk_buffer_init_with_data(bk_buffer* data, void* buffer, size_t size, bk_buffer_dtor dtor);
+	BK_EXPORT bk_buffer* bk_buffer_create_with_data(void* buffer, size_t size, bk_buffer_dtor dtor);
 	//销毁data
 	BK_EXPORT void bk_buffer_destroy(bk_buffer* data);
 	//确保内存容量(可能发生内存重新分配)
@@ -67,7 +61,7 @@ extern "C" {
 	//还原偏移
 	BK_EXPORT void bk_buffer_rewind(bk_buffer* data);
 	//eof测试
-	BK_EXPORT int bk_buffer_eof(bk_buffer* data);
+	BK_EXPORT bk_bool bk_buffer_eof(bk_buffer* data);
 #ifdef __cplusplus
 };
 #endif

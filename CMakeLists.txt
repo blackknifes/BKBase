@@ -9,7 +9,23 @@ endif()
 
 add_definitions("-DBK_EXPORT_IMPLEMENTS")
 
-set(SOURCES bk_stream.c bk_buffer.c bk_data.c bk_vector.c bk_list.c bk_hashmap.c)
-set(HEADERS bk_stream.h bk_export.h bk_platform.h bk_buffer.h bk_data.h bk_vector.h bk_list.h bk_hashmap.h bk_types.h)
+file(GLOB_RECURSE BKBASE_SOURCES "./src/*.c" "./src/*.cpp" "./src/*.cc")
+file(GLOB_RECURSE BKBASE_HEADERS "./include/*.h" "./include/*.hpp")
 
-add_executable(BKBase ${SOURCES} ${HEADERS} main.cpp)
+add_library(BKBase SHARED ${BKBASE_SOURCES} ${BKBASE_HEADERS})
+target_include_directories(BKBase PUBLIC "${CMAKE_CURRENT_LIST_DIR}/include")
+set(BKBASE_INCLUDE_DIR "${CMAKE_CURRENT_LIST_DIR}/deps/gtest/googletest/include")
+
+if (EXISTS "${CMAKE_CURRENT_LIST_DIR}/deps/gtest/googletest/src/gtest-all.cc")
+	option(ENABLE_GKBASE_TEST "Build unit test" ON)
+	if(ENABLE_GKBASE_TEST)
+		file(GLOB_RECURSE BKBASE_TEST_SOURCES "./test/*.c" "./test/*.cpp" "./test/*.cc" "./test/*.h" "./test/*.hpp")
+		add_executable(BKBase_Test ${BKBASE_TEST_SOURCES} "${CMAKE_CURRENT_LIST_DIR}/deps/gtest/googletest/src/gtest-all.cc")
+
+		target_include_directories(BKBase_Test 
+			PRIVATE "${BKBASE_INCLUDE_DIR}"
+			PRIVATE "${CMAKE_CURRENT_LIST_DIR}/deps/gtest/googletest")
+		target_include_directories(BKBase_Test PUBLIC "${CMAKE_CURRENT_LIST_DIR}/include")
+		target_link_libraries(BKBase_Test BKBase)
+	endif()
+endif()
