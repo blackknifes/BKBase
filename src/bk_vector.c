@@ -3,8 +3,6 @@
 #include <malloc.h>
 #include <memory.h>
 
-#define ALIGN(size) (((size) + sizeof(void*) - 1) & ~(sizeof(void*) - 1))
-
 typedef struct bk_vector_struct
 {
 	size_t value_size;
@@ -27,7 +25,7 @@ bk_vector* bk_vector_create(size_t valSize, void(*dtor)(void*))
 		return 0;
 	}
 	bk_vector* vec = (bk_vector*)malloc(sizeof(bk_vector));
-	vec->value_size = ALIGN(valSize);
+	vec->value_size = BK_ALIGN(valSize);
 	vec->size = vec->capacity = 0;
 	vec->data = 0;
 	vec->dtor = dtor;
@@ -44,11 +42,6 @@ void bk_vector_destroy(bk_vector* vec)
 	if (vec->data)
 		free(vec->data);
 	free(vec);
-}
-
-void* bk_vector_get_array_pointer(bk_vector* vec)
-{
-	return vec->data;
 }
 
 void bk_vector_reserve(bk_vector* vec, size_t capacity)
@@ -97,6 +90,21 @@ void* bk_vector_get_front(bk_vector* vec)
 void* bk_vector_get_back(bk_vector* vec)
 {
 	return bk_vector_get_data(vec, vec->size - 1);
+}
+
+void* bk_vector_begin(bk_vector* vec)
+{
+	return vec->data;
+}
+
+void* bk_vector_end(bk_vector* vec)
+{
+	return (unsigned char*)vec->data + (vec->value_size * vec->size);
+}
+
+void* bk_vector_next(bk_vector* vec, void* itor)
+{
+	return (unsigned char*)itor + vec->value_size;
 }
 
 void bk_vector_push_back(bk_vector* vec, const void* _data)

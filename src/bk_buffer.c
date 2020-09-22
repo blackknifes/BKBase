@@ -58,11 +58,12 @@ void bk_buffer_destroy(bk_buffer* data)
 
 void bk_buffer_reserve(bk_buffer* data, size_t capacity)
 {
-	if (data->capacity <= capacity)
+	if (capacity <= data->capacity)
 		return;
 	void* newData = malloc(capacity);
 	memcpy(newData, data->data, data->capacity);
-	bk_buffer_destroy(data);
+	if (data->dtor && data->data)
+		data->dtor(data->data);
 	data->data = newData;
 	data->capacity = capacity;
 }
@@ -116,7 +117,7 @@ size_t bk_buffer_get_limit(bk_buffer* data)
 	return data->limit;
 }
 
-size_t bk_buffer_capacity(bk_buffer* data)
+size_t bk_buffer_get_capacity(bk_buffer* data)
 {
 	return data->capacity;
 }

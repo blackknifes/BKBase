@@ -73,7 +73,7 @@ int main()
     std::vector<size_t> vals;
 
     auto itor = bk_hashmap_iterator_begin(map);
-    while (bk_hashmap_iterator_is_valid(&itor))
+    while (bk_hashmap_iterator_is_end(&itor))
     {
 		const char* key = (const char*)bk_hashmap_iterator_get_key(&itor);
 		size_t val = (size_t)bk_hashmap_iterator_get_value(&itor);

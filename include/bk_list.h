@@ -15,8 +15,10 @@ extern "C" {
 	BK_EXPORT void bk_list_destroy(bk_list* _list);
 
 	BK_EXPORT void bk_list_clear(bk_list* _list);
-	BK_EXPORT void* bk_list_get_next(void* data);
-	BK_EXPORT void* bk_list_get_pre(void* data);
+	BK_EXPORT void* bk_list_next(bk_list* _list, void* data);
+	BK_EXPORT void* bk_list_pre(bk_list* _list, void* data);
+	BK_EXPORT void* bk_list_begin(bk_list* _list);
+	BK_EXPORT void* bk_list_end(bk_list* _list);
 
 	BK_EXPORT size_t bk_list_get_size(bk_list* _list);
 	BK_EXPORT void* bk_list_get_front(bk_list* _list);
@@ -29,7 +31,7 @@ extern "C" {
 	BK_EXPORT void bk_list_insert(bk_list* _list, const void* inserted, const void* obj);
 	BK_EXPORT void bk_list_insert_before(bk_list* _list, const void* inserted, const void* obj);
 	BK_EXPORT void bk_list_insert_after(bk_list* _list, const void* inserted, const void* obj);
-	BK_EXPORT void bk_list_erase(bk_list* _list, void* data);
+	BK_EXPORT void* bk_list_erase(bk_list* _list, void* data);
 #ifdef __cplusplus
 };
 #endif

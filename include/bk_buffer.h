@@ -34,7 +34,7 @@ extern "C" {
 	//获取limit
 	BK_EXPORT size_t bk_buffer_get_limit(bk_buffer* data);
 	//获取容量
-	BK_EXPORT size_t bk_buffer_capacity(bk_buffer* data);
+	BK_EXPORT size_t bk_buffer_get_capacity(bk_buffer* data);
 
 	//设置position
 	BK_EXPORT void bk_buffer_position(bk_buffer* data, size_t pos);

@@ -7,6 +7,7 @@
 
 #include "bk_error.h"
 #include "bk_types.h"
+#include "bk_defines.h"
 
 #ifdef _MSC_VER
 #	define COMPILER_MSVC

@@ -3,7 +3,6 @@
 #include <malloc.h>
 #include <memory.h>
 
-#define ALIGN(size) (((size) + sizeof(void*) - 1) & ~(sizeof(void*) - 1))
 #define BK_LIST_GET_NODE(ptr) ((struct bk_list_node_struct*)( \
 								(unsigned char*)(ptr) - \
 								(unsigned char*)&(((bk_list_node*)0)->data)	\
@@ -51,7 +50,7 @@ bk_list* bk_list_create(size_t valSize, void(*dtor)(void*))
 	assert(valSize != 0);
 	bk_list* _list = (bk_list*)malloc(sizeof(bk_list));
 	_list->front = _list->back = BK_NULL;
-	_list->value_size = ALIGN(valSize);
+	_list->value_size = BK_ALIGN(valSize);
 	_list->size = 0;
 	_list->dtor = dtor;
 	return _list;
@@ -89,7 +88,7 @@ void bk_list_clear(bk_list* _list)
 	_list->front = _list->back = BK_NULL;
 }
 
-void* bk_list_get_next(void* data)
+void* bk_list_next(bk_list* _list, void* data)
 {
 	bk_list_node* node = BK_LIST_GET_NODE(data)->next;
 	if (!node)
@@ -97,12 +96,26 @@ void* bk_list_get_next(void* data)
 	return node->data;
 }
 
-void* bk_list_get_pre(void* data)
+void* bk_list_pre(bk_list* _list, void* data)
 {
+	if(!data)
+		return _list->back->data;
 	bk_list_node* node = BK_LIST_GET_NODE(data)->pre;
 	if (!node)
 		return BK_NULL;
 	return node->data;
+}
+
+void* bk_list_begin(bk_list* _list)
+{
+	if (_list->size == 0)
+		return BK_NULL;
+	return _list->front->data;
+}
+
+void* bk_list_end(bk_list* _list)
+{
+	return BK_NULL;
 }
 
 size_t bk_list_get_size(bk_list* _list)
@@ -213,7 +226,7 @@ void bk_list_insert_after(bk_list* _list, const void* inserted, const void* obj)
 	++_list->size;
 }
 
-void bk_list_erase(bk_list* _list, void* data)
+void* bk_list_erase(bk_list* _list, void* data)
 {
 	bk_list_node* node = BK_LIST_GET_NODE(data);
 	bk_list_node* pre = node->pre;
@@ -229,4 +242,7 @@ void bk_list_erase(bk_list* _list, void* data)
 
 	--_list->size;
 	bk_list_node_destroy(node, _list->dtor);
+	if (!next)
+		return BK_NULL;
+	return next->data;
 }
